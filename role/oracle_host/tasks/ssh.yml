@@ -1,0 +1,103 @@
+---
+- name: ssh-keys | Generate SSH keys
+  local_action: "shell rm -f {{ ssh_keys[0] }}*; ssh-keygen -q -N "" -f {{ ssh_keys[0] }} ; chmod +r {{ ssh_keys[0] }}; cat {{ ssh_keys[1] }} > {{ ssh_keys[2] }}"
+  ignore_errors: True
+  when: configure_ssh and master_node and configure_cluster
+  become: false
+  tags:
+    - sshkeys
+
+- name: ssh-keys | Add ssh-keys & authorized_keys to oracle user
+  copy:
+    src: "{{ item[1] }}"
+    dest: "/home/{{ item[0].username }}/.ssh"
+    owner: "{{ item[0].username }}"
+    group: "{{ item[0].primary_group }}"
+    force: yes
+    mode: 600
+  when: configure_ssh and configure_cluster
+  with_nested:
+    - "{{ oracle_users }}"
+    - "{{ ssh_keys }}"
+  tags:
+    - sshkeys
+
+- name: ssh-keys | Add ssh-keys & authorized_keys to grid user
+  copy:
+    src: "{{ item[1] }}"
+    dest: "/home/{{ item[0].username }}/.ssh"
+    owner: "{{ item[0].username }}"
+    group: "{{ item[0].primary_group }}"
+    force: yes
+    mode: 600
+  when: configure_ssh and configure_cluster and role_separation
+  with_nested:
+    - "{{ grid_users }}"
+    - "{{ ssh_keys }}"
+  tags:
+    - sshkeys
+
+- name: ssh-keys | Add short name to known_hosts
+  local_action: shell ssh-keyscan -p {{ ansible_ssh_port|default(22) }} -H {{ ansible_hostname }} 2> /dev/null >> {{ keyfile }}
+  ignore_errors: True
+  become: false
+  when: configure_ssh and configure_cluster
+  tags:
+   - sshkeys
+
+- name: ssh-keys | Add FQDN to known_hosts
+  local_action: shell ssh-keyscan -p {{ ansible_ssh_port|default(22) }} -H {{ ansible_fqdn }} 2> /dev/null >> {{ keyfile }}
+  ignore_errors: True
+  become: false
+  when: configure_ssh and configure_cluster
+  tags:
+   - sshkeys
+
+- name: ssh-keys | Add IPv4 to known_hosts
+  local_action: shell ssh-keyscan -p {{ ansible_ssh_port|default(22) }} -H {{ ansible_default_ipv4.address }} 2> /dev/null >> {{ keyfile }}
+  ignore_errors: True
+  become: false
+  when: configure_ssh and configure_cluster
+  tags:
+   - sshkeys
+
+- name: ssh-keys | Copy known_hosts to oracle user
+  copy:
+    src: "{{keyfile}}"
+    dest: /home/{{ item.username }}/.ssh/known_hosts
+    owner: "{{ item.username }}"
+    group: "{{ item.primary_group }}"
+  with_items: "{{oracle_users}}"
+  when: configure_ssh and configure_cluster
+  tags:
+   - sshkeys
+
+- name: ssh-keys | Copy known_hosts to grid user
+  copy:
+    src: "{{keyfile}}"
+    dest: "/home/{{ item.username }}/.ssh/known_hosts"
+    owner: "{{ item.username }}"
+    group: "{{ item.primary_group }}"
+  with_items: "{{grid_users}}"
+  when: configure_ssh and configure_cluster and role_separation
+  tags:
+   - sshkeys
+
+- name: ssh-keys | Remove generated keys from control machine
+  local_action:
+    file:
+      path: "{{ item }}"
+      state: absent
+  with_items:
+      - "{{ ssh_keys }}"
+      - "{{ keyfile }}"
+  when: master_node and configure_ssh and configure_cluster
+  ignore_errors: true
+  become: false
+  tags:
+    - sshkeys
+
+- include: fs_disk.yml
+  tags:
+    - filesystem
+    - disk

@@ -1,0 +1,84 @@
+---
+
+- name: Install necessary packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items: "{{ oracle_packages }}"
+  when: install_os_packages and ansible_os_family == 'RedHat'
+  tags:
+    - os_packages
+
+- name: Install packages required by Oracle for ASMlib
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items: "{{ oracle_asm_packages }}"
+  when: use_asmlib and ansible_os_family == 'RedHat'
+  tags:
+    - use_asmlib
+
+- name: Check firewalld is disalbed
+  yum:
+    list: "{{ firewall_service }}"
+    disablerepo: "*"
+  when: disable_firewall and ansible_os_family == 'RedHat'
+  tags: firewall
+  register:
+    - firewall
+
+- name: Disable Firewall Service
+  service:
+    name: firewall
+    state: stopped
+    enabled: no
+  when: disable_firewall and ansible_os_family == 'RedHat' and firewall.results
+  tags:
+    - firewall
+
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  when: disable_selinux and ansible_os_family == 'Redhat'
+  tags:
+    - selinux
+
+- name: Disable SELinux Runtime
+  shell: setenforce 0
+  when: disable_selinux and ansible_os_family == 'Redhat'
+  ignore_errors: yes
+  tags:
+    - selinux
+
+- name: Check DNS for host
+  command: "nslookup {{ ansible_hostname }}"
+  register: ns
+  ignore_errors: yes
+  tags:
+    - etchosts
+
+- name: Add host to /etc/hosts if needed
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ ansible_fqdn }}$'
+    line: "{{ etc_hosts_ip }} {{ ansible_hostname }} {{ ansible_fqdn }}"
+    state: present
+  when: "(': NXDOMAIN' in ns.stdout) or (' No answer' in ns.stdout) or configure_etc_hosts"
+  tags:
+    - etchosts
+
+- include: user_group.yml
+  tags:
+    - user_group
+
+- include: ssh.yml
+  tags:
+    - ssh
+
+
+
+
+
+
+
+

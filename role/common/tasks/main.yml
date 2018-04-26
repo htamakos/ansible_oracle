@@ -19,6 +19,7 @@
   yum:
     name: "{{ item }}"
     state: installed
+  with_items: common_packages
   when: install_os_packages and ansible_os_family == "RedHat"
   tags: common_packages
 
