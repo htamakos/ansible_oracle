@@ -1,0 +1,25 @@
+---
+
+- name: Host Conf
+  host: orarac-hosts
+  user: ansible
+  become: yes
+  roles:
+    - common
+    - oracle_host
+    - oracle_host_storage
+
+- name: GI Install And ASM Conf
+  host: orarac-hosts
+  user: ansible
+  become: yes
+  roles:
+    - oracle_gi_install
+    - oracle_asm_conf
+
+- name: Oracle Database Install And Database create
+  host: orarac-hosts
+  user: ansible
+  become: yes
+    - oracle_db_install
+    - oracle_db_create
