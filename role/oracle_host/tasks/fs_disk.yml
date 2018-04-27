@@ -15,6 +15,11 @@
   shell: fdisk -l | grep /dev/{{ disk }}
   with_items:
     - "{{ disks }}"
+  register: fdisk_check
+
+- name: Debug fdisk_check
+  debug:
+    var: fdisk_check
 
 #- name: Configure Disks
 #  shell: |
