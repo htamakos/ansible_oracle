@@ -12,7 +12,7 @@
   tags: hostfs
 
 - name: Check Disk Partion
-  shell: fdisk -l | grep /dev/{{ disk }}
+  shell: fdisk -l | grep /dev/{{ item }}
   with_items:
     - "{{ disks }}"
   register: fdisk_check
