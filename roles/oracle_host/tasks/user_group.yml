@@ -32,7 +32,7 @@
     generate_ssh_key: yes
     append: yes
     state: present
-    passwd: "{{ item.passwd }}"
+    password: "{{ item.passwd }}"
   with_items: "{{ grid_users }}"
 
 - name: Add oracle User to sudoers
