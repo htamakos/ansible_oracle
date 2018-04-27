@@ -1,0 +1,30 @@
+---
+
+- name: Create directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: 775
+  with_items:
+      - "{{ oracle_ofa_directories }}"
+  tags: hostfs
+
+- name: Check Disk Partion
+  shell: fdisk -l | grep /dev/{{ disk }}
+  with_items:
+    - "{{ disks }}"
+  register: fdisk_check
+
+- name: Debug fdisk_check
+  debug:
+    var: fdisk_check
+
+#- name: Configure Disks
+#  shell: |
+#    parted -s -a optimal /dev/{{ disk }} mklabel msdos
+#    parted -s -a optimal /dev/{{ disk }} -- mkpart primary xfs 1 -1
+#  with_items:
+#    - "{{ disks }}"
+#  when:
